@@ -1,16 +1,18 @@
 "use client";
 
-import { useDrawing } from "./drawing-context";
+import { useDrawing } from "@/components/drawing-context";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ColorPaletteProps {
   isVisible: boolean;
   onClose: () => void;
+  xPosition: number | null;
 }
 
 export default function ColorPalette({
   isVisible,
   onClose,
+  xPosition,
 }: ColorPaletteProps) {
   const { color, setColor } = useDrawing();
 
@@ -39,13 +41,14 @@ export default function ColorPalette({
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {isVisible && xPosition !== null && (
         <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          initial={{ opacity: 0, y: -20, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.9 }}
+          exit={{ opacity: 0, y: -20, scale: 0.9 }}
           transition={{ duration: 0.2 }}
-          className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-[#171717] backdrop-blur-sm rounded-xl p-4 shadow-2xl"
+          className="absolute bottom-full mb-2 bg-[#171717] backdrop-blur-sm rounded-xl p-4 shadow-2xl"
+          style={{ left: xPosition, transform: "translateX(-50%)" }}
           onMouseLeave={onClose}
         >
           <div className="grid grid-cols-4 gap-3">
@@ -53,10 +56,10 @@ export default function ColorPalette({
               <motion.button
                 key={colorOption.value}
                 onClick={() => handleColorSelect(colorOption.value)}
-                className={`w-8 h-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
+                className={`w-8 h-8 rounded-full transition-all duration-200 hover:scale-110 ${
                   color === colorOption.value
-                    ? "border-white shadow-lg shadow-white/30"
-                    : "border-slate-500 hover:border-slate-300"
+                    ? "ring-2 ring-white shadow-lg shadow-white/30"
+                    : "hover:ring-1 hover:ring-slate-300"
                 }`}
                 style={{ backgroundColor: colorOption.value }}
                 whileHover={{ scale: 1.1 }}
@@ -67,7 +70,7 @@ export default function ColorPalette({
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="w-full h-full rounded-full border-2 border-white/50"
+                    className="w-full h-full rounded-full ring-2 ring-white/50"
                   />
                 )}
               </motion.button>
@@ -79,7 +82,7 @@ export default function ColorPalette({
             <div className="flex items-center justify-center gap-2">
               <span className="text-xs text-slate-300">Current:</span>
               <div
-                className="w-6 h-6 rounded-full border-2 border-slate-400"
+                className="w-6 h-6 rounded-full"
                 style={{ backgroundColor: color }}
               />
               <span className="text-xs text-slate-300 font-mono">{color}</span>
