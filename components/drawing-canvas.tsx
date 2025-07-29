@@ -102,8 +102,29 @@ export default function DrawingCanvas() {
 
     ctx.fillStyle = "#000000";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Clear all non-drawing layers
-    setLayers(layers.filter((layer) => layer.type === "drawing"));
+
+    // Clear all layers except keep at least one drawing layer
+    const drawingLayers = layers.filter((layer) => layer.type === "drawing");
+
+    if (drawingLayers.length === 0) {
+      // No drawing layers exist, clear all and create a new drawing layer
+      setLayers([]);
+      const newLayerId = addLayer({
+        type: "drawing",
+        x: 0,
+        y: 0,
+        width: canvas.width,
+        height: canvas.height,
+        data: {},
+      });
+      setActiveDrawingLayerId(newLayerId);
+    } else {
+      // Keep only one drawing layer, clear others
+      const firstDrawingLayer = drawingLayers[0];
+      setLayers([firstDrawingLayer]);
+      setActiveDrawingLayerId(firstDrawingLayer.id);
+    }
+
     saveState();
   };
 
@@ -515,25 +536,14 @@ export default function DrawingCanvas() {
 
     const point = getMousePos(e);
 
-    // Handle selection of existing layers
-    if (
-      ![
-        "pencil",
-        "brush",
-        "eraser",
-        "text",
-        "circle",
-        "square",
-        "triangle",
-        "fill",
-      ].includes(currentTool)
-    ) {
+    // Handle selection and manipulation of existing layers when using select tool
+    if (currentTool === "select") {
       setSelectedLayerId(null); // Deselect previous
       // Iterate layers in reverse order (top-most first) to find a hit
       const clickedLayer = [...layers]
         .sort((a, b) => b.zIndex - a.zIndex) // Sort descending zIndex
         .find((layer) => {
-          if (!layer.visible) return false;
+          if (!layer.visible || layer.type === "drawing") return false; // Skip drawing layers
           // Simple bounding box hit test
           return (
             point.x >= layer.x &&
@@ -545,22 +555,8 @@ export default function DrawingCanvas() {
 
       if (clickedLayer) {
         setSelectedLayerId(clickedLayer.id);
-        setIsMovingLayer(true);
-        setInitialMousePos({ x: e.clientX, y: e.clientY });
-        setInitialLayerRect({
-          x: clickedLayer.x,
-          y: clickedLayer.y,
-          width: clickedLayer.width,
-          height: clickedLayer.height,
-          initialFontSize:
-            clickedLayer.type === "text"
-              ? clickedLayer.data.fontSize
-              : undefined,
-        });
-        if (clickedLayer.type === "text") {
-          setTextInput(clickedLayer.data.text);
-          setIsTyping(true);
-        }
+        // Don't start moving immediately - let the user see the selection first
+        // Moving will be handled by the bounding box mousedown event
       }
       return; // Stop here if we're in selection mode
     }
@@ -588,18 +584,32 @@ export default function DrawingCanvas() {
             ...clickedLayer.data,
             filled: !clickedLayer.data.filled,
             color: color, // Update to current color when filling
-          }
+          },
         });
         saveState();
       } else {
         // If no shape was clicked, use flood fill on the drawing layer
         floodFill(Math.floor(point.x), Math.floor(point.y), color);
-        saveState(); // Save overall canvas state
+        saveState(); // Save overall canvas state after fill
       }
       return;
     }
 
-    // Handle new text or shape creation
+    // Handle new text or shape creation (only for drawing tools)
+    if (
+      ![
+        "pencil",
+        "brush",
+        "eraser",
+        "text",
+        "circle",
+        "square",
+        "triangle",
+      ].includes(currentTool)
+    ) {
+      return; // Don't start drawing for other tools
+    }
+
     setIsDrawing(true);
     setLastPoint(point);
     setStartPoint(point);
@@ -944,7 +954,11 @@ export default function DrawingCanvas() {
         onMouseLeave={stopDrawing}
         style={{
           cursor:
-            currentTool === "fill"
+            currentTool === "select"
+              ? selectedLayerId
+                ? "default" // Let the bounding box handle the cursor
+                : "default"
+              : currentTool === "fill"
               ? "crosshair"
               : currentTool === "eraser"
               ? "grab"
@@ -1015,12 +1029,12 @@ export default function DrawingCanvas() {
           </div>
         )}
 
-      {/* Bounding box and resize handle for selected non-text layers */}
-      {!isTyping &&
+      {/* Bounding box and resize handle for selected layers when using select tool */}
+      {currentTool === "select" &&
         currentSelectedLayer &&
         currentSelectedLayer.type !== "drawing" && (
           <div
-            className="absolute border-2 border-dashed border-blue-500"
+            className="absolute border-2 border-dashed border-blue-500 bg-blue-500/10"
             style={{
               left: currentSelectedLayer.x,
               top: currentSelectedLayer.y,
@@ -1029,11 +1043,11 @@ export default function DrawingCanvas() {
               zIndex: 2,
               cursor: isMovingLayer ? "grabbing" : "grab",
             }}
-            onMouseDown={handleLayerMouseDown} // Handles moving the shape/image
+            onMouseDown={handleLayerMouseDown}
           >
-            {/* Resize handle */}
+            {/* Corner resize handles */}
             <div
-              className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-sm cursor-nwse-resize"
+              className="absolute -top-2 -left-2 w-4 h-4 bg-blue-500 rounded-sm cursor-nw-resize"
               onMouseDown={(e) => {
                 e.stopPropagation();
                 setIsResizingLayer(true);
@@ -1043,9 +1057,75 @@ export default function DrawingCanvas() {
                   y: currentSelectedLayer.y,
                   width: currentSelectedLayer.width,
                   height: currentSelectedLayer.height,
+                  initialFontSize:
+                    currentSelectedLayer.type === "text"
+                      ? currentSelectedLayer.data.fontSize
+                      : undefined,
                 });
               }}
             />
+            <div
+              className="absolute -top-2 -right-2 w-4 h-4 bg-blue-500 rounded-sm cursor-ne-resize"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsResizingLayer(true);
+                setInitialMousePos({ x: e.clientX, y: e.clientY });
+                setInitialLayerRect({
+                  x: currentSelectedLayer.x,
+                  y: currentSelectedLayer.y,
+                  width: currentSelectedLayer.width,
+                  height: currentSelectedLayer.height,
+                  initialFontSize:
+                    currentSelectedLayer.type === "text"
+                      ? currentSelectedLayer.data.fontSize
+                      : undefined,
+                });
+              }}
+            />
+            <div
+              className="absolute -bottom-2 -left-2 w-4 h-4 bg-blue-500 rounded-sm cursor-sw-resize"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsResizingLayer(true);
+                setInitialMousePos({ x: e.clientX, y: e.clientY });
+                setInitialLayerRect({
+                  x: currentSelectedLayer.x,
+                  y: currentSelectedLayer.y,
+                  width: currentSelectedLayer.width,
+                  height: currentSelectedLayer.height,
+                  initialFontSize:
+                    currentSelectedLayer.type === "text"
+                      ? currentSelectedLayer.data.fontSize
+                      : undefined,
+                });
+              }}
+            />
+            <div
+              className="absolute -bottom-2 -right-2 w-4 h-4 bg-blue-500 rounded-sm cursor-se-resize"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                setIsResizingLayer(true);
+                setInitialMousePos({ x: e.clientX, y: e.clientY });
+                setInitialLayerRect({
+                  x: currentSelectedLayer.x,
+                  y: currentSelectedLayer.y,
+                  width: currentSelectedLayer.width,
+                  height: currentSelectedLayer.height,
+                  initialFontSize:
+                    currentSelectedLayer.type === "text"
+                      ? currentSelectedLayer.data.fontSize
+                      : undefined,
+                });
+              }}
+            />
+
+            {/* Center info display */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-500 text-white text-xs px-2 py-1 rounded pointer-events-none">
+              {currentSelectedLayer.type === "text" &&
+              currentSelectedLayer.data.text
+                ? currentSelectedLayer.data.text.slice(0, 10) + "..."
+                : `${currentSelectedLayer.type}`}
+            </div>
           </div>
         )}
     </div>

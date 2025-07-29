@@ -101,12 +101,57 @@ export function DrawingProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteLayer = (id: string) => {
+    // Dacă este ultimul layer rămas, nu îl ștergem - doar îi curățăm conținutul
+    if (layers.length === 1) {
+      const layer = layers.find((l) => l.id === id);
+      if (layer?.type === "drawing") {
+        // Curăță conținutul drawing layer-ului prin canvas actions
+        (window as any).canvasActions?.clearCanvas();
+      } else {
+        // Pentru layerele non-drawing, le convertim într-un drawing layer
+        updateLayer(id, {
+          type: "drawing",
+          data: {},
+        });
+        setActiveDrawingLayerId(id);
+      }
+      return;
+    }
+
+    // Șterge layer-ul normal
     setLayers((prevLayers) => prevLayers.filter((layer) => layer.id !== id));
+
+    // Curăță selecțiile dacă ștergem layer-ul selectat
     if (selectedLayerId === id) {
       setSelectedLayerId(null);
     }
+
+    // Dacă ștergem active drawing layer-ul, găsește altul
     if (activeDrawingLayerId === id) {
-      setActiveDrawingLayerId(null);
+      const remainingDrawingLayers = layers.filter(
+        (layer) => layer.id !== id && layer.type === "drawing"
+      );
+
+      if (remainingDrawingLayers.length > 0) {
+        setActiveDrawingLayerId(remainingDrawingLayers[0].id);
+      } else {
+        // Nu mai sunt drawing layers, creează unul nou
+        const newDrawingLayer: Layer = {
+          id: uuidv4(),
+          type: "drawing",
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 600,
+          zIndex: Math.max(...layers.map((l) => l.zIndex)) + 1,
+          visible: true,
+          opacity: 1,
+          data: {},
+        };
+
+        setLayers((prevLayers) => [...prevLayers, newDrawingLayer]);
+        setActiveDrawingLayerId(newDrawingLayer.id);
+      }
     }
   };
 

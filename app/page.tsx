@@ -18,7 +18,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.1)_0%,transparent_50%)] opacity-30"></div>
 
         {/* Layers panel positioned at left side - full height */}
-        <div className="fixed top-0 left-0 z-20 w-64 h-screen bg-[#1a1a1a]/95 backdrop-blur-sm border-r border-slate-700 p-4 shadow-xl">
+        <div className="fixed top-0 left-0 z-20 w-64 h-screen bg-[#171717] backdrop-blur-sm p-4 shadow-xl">
           <LayersPanel />
         </div>
 
@@ -28,7 +28,7 @@ export default function Home() {
         </div>
 
         {/* Floating dock positioned at bottom */}
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-20">
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-20 ">
           <DrawingToolsDock />
         </div>
       </main>

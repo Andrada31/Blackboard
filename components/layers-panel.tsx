@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useDrawing } from "@/components/drawing-context";
 import {
   Eye,
@@ -13,6 +13,8 @@ import {
   Triangle,
   Pencil,
 } from "lucide-react";
+import Image from "next/image";
+import logo from "../assets/logo1.png";
 
 export default function LayersPanel() {
   const {
@@ -49,7 +51,7 @@ export default function LayersPanel() {
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   };
 
@@ -82,19 +84,49 @@ export default function LayersPanel() {
   // Sort layers by zIndex for display
   const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
 
+  // Afișează mesaj doar dacă nu există layere (nu ar trebui să se întâmple niciodată)
+  if (layers.length === 0) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <Image
+            src={logo}
+            alt="Blackboard Logo"
+            width={120}
+            height={40}
+            className="object-contain"
+            priority
+          />
+        </div>
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-neutral-400 text-sm">Loading layers...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
-      <h2 className="text-lg font-semibold mb-4 text-white">Layers</h2>
+      {/* Logo */}
+      <div className="flex justify-center mb-6">
+        <Image
+          src={logo}
+          alt="Blackboard Logo"
+          width={120}
+          height={40}
+          className="object-contain"
+          priority
+        />
+      </div>
+      {/* <h2 className="text-lg font-semibold mb-4 text-white text-center">
+        BlackBird
+      </h2> */}
       <div className="flex-grow overflow-y-auto pr-2">
-        {sortedLayers.length === 0 && (
-          <p className="text-neutral-400 text-sm">
-            No layers yet. Draw something!
-          </p>
-        )}
         {sortedLayers.map((layer) => (
           <div
             key={layer.id}
-            draggable={layer.type !== "drawing"} // Allow dragging all except the base drawing layer for now
+            draggable={layer.type !== "drawing"}
             onDragStart={(e) => handleDragStart(e, layer.id)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, layer.id)}
@@ -148,22 +180,22 @@ export default function LayersPanel() {
                   <EyeOff className="h-4 w-4" />
                 )}
               </button>
-              {layer.type !== "drawing" && ( // Prevent deleting the base drawing layer for now
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(layer.id);
-                  }}
-                  className={`p-1 rounded-full hover:bg-red-700 ${
-                    selectedLayerId === layer.id
-                      ? "text-black"
-                      : "text-neutral-300"
-                  }`}
-                  title="Delete layer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(layer.id);
+                }}
+                className={`p-1 rounded-full hover:bg-red-700 ${
+                  selectedLayerId === layer.id
+                    ? "text-black"
+                    : "text-neutral-300"
+                }`}
+                title={
+                  layers.length === 1 ? "Clear layer content" : "Delete layer"
+                }
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           </div>
         ))}
