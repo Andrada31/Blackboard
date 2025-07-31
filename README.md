@@ -1,4 +1,4 @@
-# Digital Blackboard
+# Blackboard
 
 A modern, feature-rich digital drawing application built with Next.js and React. Create, edit, and manage multiple drawing layers with a comprehensive set of drawing tools.
 
