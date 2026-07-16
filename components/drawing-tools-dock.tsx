@@ -7,7 +7,7 @@ import { useDrawing } from "@/components/drawing-context";
 import ColorPalette from "@/components/color-palette";
 import BrushSizeSlider from "@/components/brush-size-slider";
 import TextOptionsPanel from "@/components/text-options-panel";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Pencil,
   Eraser,
@@ -35,6 +35,7 @@ export default function DrawingToolsDock() {
   const [colorPaletteX, setColorPaletteX] = useState<number | null>(null);
   const [brushSizeSliderX, setBrushSizeSliderX] = useState<number | null>(null);
   const [textOptionsX, setTextOptionsX] = useState<number | null>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
 
   const handleToolClick = (tool: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -87,23 +88,32 @@ export default function DrawingToolsDock() {
 
   const handleMouseEnter = (
     toolType: "colors" | "brushSize" | "textOptions" | "none",
-    index: number
+    index: number,
+    e?: React.MouseEvent<HTMLDivElement>
   ) => {
-    // Calculate position based on dock item index
-    // Using more accurate dimensions based on the FloatingDock component
-    const itemWidth = 40; // Base width from FloatingDock
-    const gap = 16; // Gap between items
-    const expandedWidth = 80; // Width when hovered (from FloatingDock transforms)
+    let centerX = 0;
 
-    // Calculate the total dock width
-    const totalDockWidth =
-      drawingTools.length * itemWidth + (drawingTools.length - 1) * gap;
+    if (e && e.currentTarget && dockRef.current) {
+      const iconRect = e.currentTarget.getBoundingClientRect();
+      const dockRect = dockRef.current.getBoundingClientRect();
+      centerX = iconRect.x - dockRect.x + iconRect.width / 2;
+    } else {
+      // Calculate position based on dock item index
+      // Using more accurate dimensions based on the FloatingDock component
+      const itemWidth = 40; // Base width from FloatingDock
+      const gap = 16; // Gap between items
+      const expandedWidth = 80; // Width when hovered (from FloatingDock transforms)
 
-    // Get the dock's starting position (center of screen minus half dock width)
-    const dockStartX = (window.innerWidth - totalDockWidth) / 2;
+      // Calculate the total dock width
+      const totalDockWidth =
+        drawingTools.length * itemWidth + (drawingTools.length - 1) * gap;
 
-    // Calculate the center X position for this specific tool
-    const centerX = dockStartX + index * (itemWidth + gap) + itemWidth / 2;
+      // Get the dock's starting position (center of screen minus half dock width)
+      const dockStartX = (window.innerWidth - totalDockWidth) / 2;
+
+      // Calculate the center X position for this specific tool
+      centerX = dockStartX + index * (itemWidth + gap) + itemWidth / 2;
+    }
 
     // Close all panels
     setShowColorPalette(false);
@@ -144,7 +154,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("colors", e),
-      onMouseEnter: () => handleMouseEnter("colors", 0),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("colors", 0, e),
     },
     {
       title: "Select",
@@ -159,7 +169,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("select", e),
-      onMouseEnter: () => handleMouseEnter("none", 1),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("none", 1, e),
     },
     {
       title: "Pencil",
@@ -172,7 +182,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("pencil", e),
-      onMouseEnter: () => handleMouseEnter("brushSize", 2),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("brushSize", 2, e),
     },
     {
       title: "Brush",
@@ -185,7 +195,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("brush", e),
-      onMouseEnter: () => handleMouseEnter("brushSize", 3),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("brushSize", 3, e),
     },
     {
       title: "Fill",
@@ -200,7 +210,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("fill", e),
-      onMouseEnter: () => handleMouseEnter("none", 4),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("colors", 4, e),
     },
     {
       title: "Eraser",
@@ -213,7 +223,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("eraser", e),
-      onMouseEnter: () => handleMouseEnter("brushSize", 5),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("brushSize", 5, e),
     },
     {
       title: "Circle",
@@ -226,7 +236,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("circle", e),
-      onMouseEnter: () => handleMouseEnter("none", 6),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("brushSize", 6, e),
     },
     {
       title: "Square",
@@ -239,7 +249,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("square", e),
-      onMouseEnter: () => handleMouseEnter("none", 7),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("brushSize", 7, e),
     },
     {
       title: "Triangle",
@@ -252,7 +262,7 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("triangle", e),
-      onMouseEnter: () => handleMouseEnter("none", 8),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("brushSize", 8, e),
     },
     {
       title: "Text",
@@ -265,40 +275,40 @@ export default function DrawingToolsDock() {
       ),
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("text", e),
-      onMouseEnter: () => handleMouseEnter("textOptions", 9),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("textOptions", 9, e),
     },
     {
       title: "Undo",
       icon: <Undo className="h-full w-full text-neutral-300" />,
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("undo", e),
-      onMouseEnter: () => handleMouseEnter("none", 10),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("none", 10, e),
     },
     {
       title: "Redo",
       icon: <Redo className="h-full w-full text-neutral-300" />,
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("redo", e),
-      onMouseEnter: () => handleMouseEnter("none", 11),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("none", 11, e),
     },
     {
       title: "Save",
       icon: <Download className="h-full w-full text-neutral-300" />,
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("save", e),
-      onMouseEnter: () => handleMouseEnter("none", 12),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("none", 12, e),
     },
     {
       title: "Clear",
       icon: <Trash2 className="h-full w-full text-neutral-300" />,
       href: "#",
       onClick: (e: React.MouseEvent) => handleToolClick("clear", e),
-      onMouseEnter: () => handleMouseEnter("none", 13),
+      onMouseEnter: (e?: React.MouseEvent<HTMLDivElement>) => handleMouseEnter("none", 13, e),
     },
   ];
 
   return (
-    <div className="relative" onMouseLeave={handleMouseLeaveDock}>
+    <div className="relative" onMouseLeave={handleMouseLeaveDock} ref={dockRef}>
       <ColorPalette
         isVisible={showColorPalette}
         onClose={() => setShowColorPalette(false)}

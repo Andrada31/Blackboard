@@ -25,7 +25,7 @@ export const FloatingDock = ({
     icon: React.ReactNode;
     href: string;
     onClick?: (e: React.MouseEvent) => void;
-    onMouseEnter?: () => void;
+    onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
   }[];
   desktopClassName?: string;
   mobileClassName?: string;
@@ -47,7 +47,7 @@ const FloatingDockMobile = ({
     icon: React.ReactNode;
     href: string;
     onClick?: (e: React.MouseEvent) => void;
-    onMouseEnter?: () => void;
+    onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
   }[];
   className?: string;
 }) => {
@@ -108,7 +108,7 @@ const FloatingDockDesktop = ({
     icon: React.ReactNode;
     href: string;
     onClick?: (e: React.MouseEvent) => void;
-    onMouseEnter?: () => void;
+    onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
   }[];
   className?: string;
 }) => {
@@ -142,7 +142,7 @@ function IconContainer({
   icon: React.ReactNode;
   href: string;
   onClick?: (e: React.MouseEvent) => void;
-  onMouseEnter?: () => void;
+  onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -195,9 +195,9 @@ function IconContainer({
       <motion.div
         ref={ref}
         style={{ width, height }}
-        onMouseEnter={() => {
+        onMouseEnter={(e) => {
           setHovered(true);
-          onMouseEnter?.();
+          onMouseEnter?.(e);
         }}
         onMouseLeave={() => setHovered(false)}
         className="relative flex aspect-square items-center justify-center rounded-full bg-[#262626] backdrop-blur-sm hover:bg-[#262626] transition-colors cursor-pointer"

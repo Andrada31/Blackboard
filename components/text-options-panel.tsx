@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useDrawing } from "@/components/drawing-context";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -23,6 +24,7 @@ export default function TextOptionsPanel({
   xPosition,
 }: TextOptionsPanelProps) {
   const { fontFamily, setFontFamily, fontSize, setFontSize } = useDrawing();
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
 
   const fontFamilies = [
     "Arial",
@@ -48,13 +50,17 @@ export default function TextOptionsPanel({
           transition={{ duration: 0.2 }}
           className="absolute bottom-full mb-2 bg-[#171717] backdrop-blur-sm rounded-xl p-4 shadow-2xl w-72"
           style={{ left: xPosition, transform: "translateX(-50%)" }}
-          onMouseLeave={onClose}
+          onMouseLeave={() => {
+            if (!isSelectOpen) {
+              onClose();
+            }
+          }}
         >
           <div className="mb-4">
             <span className="text-sm text-slate-300 block mb-2">
               Font Family:
             </span>
-            <Select value={fontFamily} onValueChange={setFontFamily}>
+            <Select value={fontFamily} onValueChange={setFontFamily} onOpenChange={setIsSelectOpen}>
               <SelectTrigger className="w-full bg-[#262626] text-white border-none focus:ring-0 focus:ring-offset-0">
                 <SelectValue placeholder="Select a font" />
               </SelectTrigger>
@@ -63,7 +69,7 @@ export default function TextOptionsPanel({
                   <SelectItem
                     key={font}
                     value={font}
-                    className="focus:bg-[#333333]"
+                    className="focus:bg-[#333333] focus:text-white"
                   >
                     <span style={{ fontFamily: font }}>{font}</span>
                   </SelectItem>

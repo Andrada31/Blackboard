@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDrawing } from "@/components/drawing-context";
 import {
   Eye,
@@ -12,6 +12,8 @@ import {
   Square,
   Triangle,
   Pencil,
+  X,
+  Plus,
 } from "lucide-react";
 import Image from "next/image";
 import logo from "../assets/logo1.png";
@@ -24,8 +26,24 @@ export default function LayersPanel() {
     updateLayer,
     deleteLayer,
     reorderLayers,
+    currentTool,
+    brushSize,
+    setBrushSize,
+    color,
+    setColor,
+    fontSize,
+    setFontSize,
+    addLayer,
+    setActiveDrawingLayerId,
+    isPerfectShape,
+    setIsPerfectShape,
   } = useDrawing();
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [showConfigPanel, setShowConfigPanel] = useState(true);
+
+  useEffect(() => {
+    setShowConfigPanel(true);
+  }, [currentTool]);
 
   const getLayerIcon = (type: string) => {
     switch (type) {
@@ -167,7 +185,7 @@ export default function LayersPanel() {
                   e.stopPropagation();
                   toggleVisibility(layer.id, layer.visible);
                 }}
-                className={`p-1 rounded-full hover:bg-neutral-700 ${
+                className={`p-1 rounded-full hover:bg-neutral-700 hover:text-white ${
                   selectedLayerId === layer.id
                     ? "text-black"
                     : "text-neutral-300"
@@ -185,7 +203,7 @@ export default function LayersPanel() {
                   e.stopPropagation();
                   handleDelete(layer.id);
                 }}
-                className={`p-1 rounded-full hover:bg-red-700 ${
+                className={`p-1 rounded-full hover:bg-red-700 hover:text-white ${
                   selectedLayerId === layer.id
                     ? "text-black"
                     : "text-neutral-300"
@@ -199,7 +217,121 @@ export default function LayersPanel() {
             </div>
           </div>
         ))}
+
+        <button
+          onClick={() => {
+            const newLayerId = addLayer({
+              type: "drawing",
+              x: 0,
+              y: 0,
+              width: typeof window !== "undefined" ? window.innerWidth : 1000,
+              height: typeof window !== "undefined" ? window.innerHeight : 1000,
+              data: {},
+            });
+            setActiveDrawingLayerId(newLayerId);
+            setSelectedLayerId(newLayerId);
+          }}
+          className="w-full flex items-center justify-start p-2 rounded-md bg-neutral-800/50 hover:bg-neutral-700 text-neutral-400 hover:text-white transition-colors mt-2 mb-2 cursor-pointer"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          <span className="text-sm">New Layer</span>
+        </button>
       </div>
+
+      {/* Tool Config Panel */}
+      {showConfigPanel && currentTool !== "select" && (
+        <div className="mt-4 border-t border-neutral-700 pt-4 shrink-0 pb-2">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <span className="text-sm font-semibold text-white capitalize">
+              {currentTool} Options
+            </span>
+            <button
+              onClick={() => setShowConfigPanel(false)}
+              className="text-neutral-400 hover:text-white p-1 rounded-full hover:bg-neutral-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="px-2 space-y-4">
+            {["pencil", "brush", "eraser", "circle", "square", "triangle"].includes(currentTool) && (
+              <div>
+                <div className="flex justify-between mb-1">
+                  <label className="text-xs text-neutral-400">Stroke Width</label>
+                  <span className="text-xs text-neutral-400 font-mono">{brushSize}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  value={brushSize}
+                  onChange={(e) => setBrushSize(Number.parseInt(e.target.value))}
+                  className="w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+              </div>
+            )}
+
+            {["circle", "square", "triangle"].includes(currentTool) && (
+              <div 
+                className="flex items-center gap-2 cursor-pointer mt-2"
+                onClick={() => setIsPerfectShape(!isPerfectShape)}
+              >
+                <button
+                  type="button"
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors flex-shrink-0 ${
+                    isPerfectShape
+                      ? "bg-white border-white"
+                      : "border-neutral-600 bg-neutral-700"
+                  }`}
+                >
+                  {isPerfectShape && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#262626]" />
+                  )}
+                </button>
+                <span className="text-xs text-neutral-300">Perfect Shape (1:1)</span>
+              </div>
+            )}
+            
+            {["pencil", "brush", "circle", "square", "triangle", "fill", "text"].includes(currentTool) && (
+              <div>
+                <label className="text-xs text-neutral-400 mb-2 block">Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="w-8 h-8 rounded cursor-pointer border-0 p-0 bg-transparent"
+                  />
+                  <input
+                    type="text"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="text-xs text-neutral-300 font-mono uppercase bg-neutral-800 px-2 py-1 rounded w-20 border-none outline-none focus:ring-1 focus:ring-blue-500"
+                    spellCheck={false}
+                  />
+                </div>
+              </div>
+            )}
+
+            {currentTool === "text" && (
+              <div>
+                <div className="flex justify-between mb-1">
+                  <label className="text-xs text-neutral-400">Font Size</label>
+                  <span className="text-xs text-neutral-400 font-mono">{fontSize}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="12"
+                  max="120"
+                  value={fontSize}
+                  onChange={(e) => setFontSize(Number.parseInt(e.target.value))}
+                  className="w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

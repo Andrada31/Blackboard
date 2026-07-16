@@ -43,6 +43,8 @@ interface DrawingContextType {
   setIsDrawing: (drawing: boolean) => void;
   shapeSize: number;
   setShapeSize: (size: number) => void;
+  isPerfectShape: boolean;
+  setIsPerfectShape: (perfect: boolean) => void;
   fontFamily: string;
   setFontFamily: (font: string) => void;
   fontSize: number;
@@ -69,6 +71,7 @@ export function DrawingProvider({ children }: { children: ReactNode }) {
   const [color, setColor] = useState("#ffffff");
   const [isDrawing, setIsDrawing] = useState(false);
   const [shapeSize, setShapeSize] = useState(50);
+  const [isPerfectShape, setIsPerfectShape] = useState(true);
   const [fontFamily, setFontFamily] = useState("Arial");
   const [fontSize, setFontSize] = useState(24);
   const [layers, setLayers] = useState<Layer[]>([]);
@@ -181,6 +184,8 @@ export function DrawingProvider({ children }: { children: ReactNode }) {
         setIsDrawing,
         shapeSize,
         setShapeSize,
+        isPerfectShape,
+        setIsPerfectShape,
         fontFamily,
         setFontFamily,
         fontSize,

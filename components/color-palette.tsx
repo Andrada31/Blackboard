@@ -85,7 +85,13 @@ export default function ColorPalette({
                 className="w-6 h-6 rounded-full"
                 style={{ backgroundColor: color }}
               />
-              <span className="text-xs text-slate-300 font-mono">{color}</span>
+              <input
+                type="text"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="text-xs text-slate-300 font-mono uppercase bg-black/30 px-2 py-1 rounded w-20 border-none outline-none focus:ring-1 focus:ring-blue-500"
+                spellCheck={false}
+              />
             </div>
           </div>
         </motion.div>

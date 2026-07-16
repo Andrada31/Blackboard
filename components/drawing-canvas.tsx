@@ -9,6 +9,7 @@ export default function DrawingCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
+  const cursorRef = useRef<HTMLDivElement>(null);
   const {
     currentTool,
     brushSize,
@@ -17,6 +18,7 @@ export default function DrawingCanvas() {
     fontSize,
     isDrawing,
     setIsDrawing,
+    isPerfectShape,
     shapeSize,
     setFontSize,
     layers,
@@ -35,7 +37,7 @@ export default function DrawingCanvas() {
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(
     null
   );
-  const [history, setHistory] = useState<ImageData[]>([]);
+  const [history, setHistory] = useState<{ layers: any[]; imageData: ImageData }[]>([]);
   const [historyStep, setHistoryStep] = useState(-1);
   const [smoothPoints, setSmoothPoints] = useState<{ x: number; y: number }[]>(
     []
@@ -64,32 +66,33 @@ export default function DrawingCanvas() {
 
   const undo = () => {
     if (historyStep > 0) {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+      const offscreenCanvas = offscreenDrawingCanvasRef.current;
+      if (!offscreenCanvas) return;
 
-      const ctx = canvas.getContext("2d");
+      const ctx = offscreenCanvas.getContext("2d");
       if (!ctx) return;
 
-      setHistoryStep(historyStep - 1);
-      const imageData = history[historyStep - 1];
-      ctx.putImageData(imageData, 0, 0);
-      // Note: This undo/redo currently only affects the base drawing layer.
-      // A full layer system would require managing history for each layer's state.
+      const newStep = historyStep - 1;
+      setHistoryStep(newStep);
+      const state = history[newStep];
+      ctx.putImageData(state.imageData, 0, 0);
+      setLayers(state.layers);
     }
   };
 
   const redo = () => {
     if (historyStep < history.length - 1) {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+      const offscreenCanvas = offscreenDrawingCanvasRef.current;
+      if (!offscreenCanvas) return;
 
-      const ctx = canvas.getContext("2d");
+      const ctx = offscreenCanvas.getContext("2d");
       if (!ctx) return;
 
-      setHistoryStep(historyStep + 1);
-      const imageData = history[historyStep + 1];
-      ctx.putImageData(imageData, 0, 0);
-      // Note: This undo/redo currently only affects the base drawing layer.
+      const newStep = historyStep + 1;
+      setHistoryStep(newStep);
+      const state = history[newStep];
+      ctx.putImageData(state.imageData, 0, 0);
+      setLayers(state.layers);
     }
   };
 
@@ -262,17 +265,29 @@ export default function DrawingCanvas() {
 
           switch (layer.data.shapeType) {
             case "circle":
-              const circleRadius = Math.min(rectWidth, rectHeight) / 2;
-              const circleCenterX = rectX + rectWidth / 2;
-              const circleCenterY = rectY + rectHeight / 2;
               ctx.beginPath();
-              ctx.arc(
-                circleCenterX,
-                circleCenterY,
-                circleRadius,
-                0,
-                2 * Math.PI
-              );
+              if (layer.data.isPerfectShape !== false) {
+                const circleRadius = Math.min(rectWidth, rectHeight) / 2;
+                const circleCenterX = rectX + rectWidth / 2;
+                const circleCenterY = rectY + rectHeight / 2;
+                ctx.arc(
+                  circleCenterX,
+                  circleCenterY,
+                  circleRadius,
+                  0,
+                  2 * Math.PI
+                );
+              } else {
+                ctx.ellipse(
+                  rectX + rectWidth / 2,
+                  rectY + rectHeight / 2,
+                  rectWidth / 2,
+                  rectHeight / 2,
+                  0,
+                  0,
+                  2 * Math.PI
+                );
+              }
               // Use filled property to determine if shape should be filled or stroked
               if (layer.data.filled) {
                 ctx.fill();
@@ -281,11 +296,15 @@ export default function DrawingCanvas() {
               }
               break;
             case "square":
-              const squareSide = Math.min(rectWidth, rectHeight);
-              const squareX = rectX + (rectWidth - squareSide) / 2; // Center horizontally
-              const squareY = rectY + (rectHeight - squareSide) / 2; // Center vertically
               ctx.beginPath();
-              ctx.rect(squareX, squareY, squareSide, squareSide);
+              if (layer.data.isPerfectShape !== false) {
+                const squareSide = Math.min(rectWidth, rectHeight);
+                const squareX = rectX + (rectWidth - squareSide) / 2; // Center horizontally
+                const squareY = rectY + (rectHeight - squareSide) / 2; // Center vertically
+                ctx.rect(squareX, squareY, squareSide, squareSide);
+              } else {
+                ctx.rect(rectX, rectY, rectWidth, rectHeight);
+              }
               // Use filled property to determine if shape should be filled or stroked
               if (layer.data.filled) {
                 ctx.fill();
@@ -294,21 +313,27 @@ export default function DrawingCanvas() {
               }
               break;
             case "triangle":
-              const triangleSide = Math.min(rectWidth, rectHeight / 0.866); // Calculate side to fit height
-              const triangleHeight = triangleSide * 0.866;
-              const triangleCenterX = rectX + rectWidth / 2;
-              const triangleTopY = rectY + (rectHeight - triangleHeight) / 2;
-
               ctx.beginPath();
-              ctx.moveTo(triangleCenterX, triangleTopY);
-              ctx.lineTo(
-                triangleCenterX - triangleSide / 2,
-                triangleTopY + triangleHeight
-              );
-              ctx.lineTo(
-                triangleCenterX + triangleSide / 2,
-                triangleTopY + triangleHeight
-              );
+              if (layer.data.isPerfectShape !== false) {
+                const triangleSide = Math.min(rectWidth, rectHeight / 0.866); // Calculate side to fit height
+                const triangleHeight = triangleSide * 0.866;
+                const triangleCenterX = rectX + rectWidth / 2;
+                const triangleTopY = rectY + (rectHeight - triangleHeight) / 2;
+
+                ctx.moveTo(triangleCenterX, triangleTopY);
+                ctx.lineTo(
+                  triangleCenterX - triangleSide / 2,
+                  triangleTopY + triangleHeight
+                );
+                ctx.lineTo(
+                  triangleCenterX + triangleSide / 2,
+                  triangleTopY + triangleHeight
+                );
+              } else {
+                ctx.moveTo(rectX + rectWidth / 2, rectY);
+                ctx.lineTo(rectX, rectY + rectHeight);
+                ctx.lineTo(rectX + rectWidth, rectY + rectHeight);
+              }
               ctx.closePath();
               // Use filled property to determine if shape should be filled or stroked
               if (layer.data.filled) {
@@ -329,15 +354,19 @@ export default function DrawingCanvas() {
   }, [layers, drawAllLayers]);
 
   const saveState = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const offscreenCanvas = offscreenDrawingCanvasRef.current;
+    if (!offscreenCanvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = offscreenCanvas.getContext("2d");
     if (!ctx) return;
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, offscreenCanvas.width, offscreenCanvas.height);
     const newHistory = history.slice(0, historyStep + 1);
-    newHistory.push(imageData);
+    
+    // Deep clone layers so history retains immutable snapshots
+    const clonedLayers = JSON.parse(JSON.stringify(layers));
+    
+    newHistory.push({ layers: clonedLayers, imageData });
     setHistory(newHistory);
     setHistoryStep(newHistory.length - 1);
   };
@@ -353,7 +382,7 @@ export default function DrawingCanvas() {
     };
   };
 
-  const drawPreview = (currentPoint: { x: number; y: number }) => {
+  const drawPreview = (currentPoint: { x: number; y: number }, shiftKey: boolean = false) => {
     const previewCanvas = previewCanvasRef.current;
     if (!previewCanvas || !startPoint) return;
 
@@ -375,47 +404,71 @@ export default function DrawingCanvas() {
       previewCtx.globalAlpha = 0.7;
       previewCtx.setLineDash([5, 5]); // Dashed line for preview
 
+      const effectivePerfectShape = isPerfectShape || shiftKey;
+
       switch (currentTool) {
         case "circle":
-          const circleRadius = Math.min(rectWidth, rectHeight) / 2;
-          const circleCenterX = rectX + rectWidth / 2;
-          const circleCenterY = rectY + rectHeight / 2;
           previewCtx.beginPath();
-          previewCtx.arc(
-            circleCenterX,
-            circleCenterY,
-            circleRadius,
-            0,
-            2 * Math.PI
-          );
+          if (effectivePerfectShape) {
+            const circleRadius = Math.min(rectWidth, rectHeight) / 2;
+            const circleCenterX = rectX + rectWidth / 2;
+            const circleCenterY = rectY + rectHeight / 2;
+            previewCtx.arc(
+              circleCenterX,
+              circleCenterY,
+              circleRadius,
+              0,
+              2 * Math.PI
+            );
+          } else {
+            previewCtx.ellipse(
+              rectX + rectWidth / 2,
+              rectY + rectHeight / 2,
+              rectWidth / 2,
+              rectHeight / 2,
+              0,
+              0,
+              2 * Math.PI
+            );
+          }
           previewCtx.stroke();
           break;
 
         case "square":
-          const squareSide = Math.min(rectWidth, rectHeight);
-          const squareX = rectX + (rectWidth - squareSide) / 2; // Center horizontally
-          const squareY = rectY + (rectHeight - squareSide) / 2; // Center vertically
           previewCtx.beginPath();
-          previewCtx.rect(squareX, squareY, squareSide, squareSide);
+          if (effectivePerfectShape) {
+            const squareSide = Math.min(rectWidth, rectHeight);
+            const squareX = rectX + (rectWidth - squareSide) / 2; // Center horizontally
+            const squareY = rectY + (rectHeight - squareSide) / 2; // Center vertically
+            previewCtx.rect(squareX, squareY, squareSide, squareSide);
+          } else {
+            previewCtx.rect(rectX, rectY, rectWidth, rectHeight);
+          }
           previewCtx.stroke();
           break;
 
         case "triangle":
-          const triangleSide = Math.min(rectWidth, rectHeight / 0.866); // Calculate side to fit height
-          const triangleHeight = triangleSide * 0.866;
-          const triangleCenterX = rectX + rectWidth / 2;
-          const triangleTopY = rectY + (rectHeight - triangleHeight) / 2;
-
           previewCtx.beginPath();
-          previewCtx.moveTo(triangleCenterX, triangleTopY);
-          previewCtx.lineTo(
-            triangleCenterX - triangleSide / 2,
-            triangleTopY + triangleHeight
-          );
-          previewCtx.lineTo(
-            triangleCenterX + triangleSide / 2,
-            triangleTopY + triangleHeight
-          );
+          if (effectivePerfectShape) {
+            const triangleSide = Math.min(rectWidth, rectHeight / 0.866); // Calculate side to fit height
+            const triangleHeight = triangleSide * 0.866;
+            const triangleCenterX = rectX + rectWidth / 2;
+            const triangleTopY = rectY + (rectHeight - triangleHeight) / 2;
+
+            previewCtx.moveTo(triangleCenterX, triangleTopY);
+            previewCtx.lineTo(
+              triangleCenterX - triangleSide / 2,
+              triangleTopY + triangleHeight
+            );
+            previewCtx.lineTo(
+              triangleCenterX + triangleSide / 2,
+              triangleTopY + triangleHeight
+            );
+          } else {
+            previewCtx.moveTo(rectX + rectWidth / 2, rectY);
+            previewCtx.lineTo(rectX, rectY + rectHeight);
+            previewCtx.lineTo(rectX + rectWidth, rectY + rectHeight);
+          }
           previewCtx.closePath();
           previewCtx.stroke();
           break;
@@ -480,19 +533,14 @@ export default function DrawingCanvas() {
     if (!fillRGB) return;
 
     // Don't fill if the color is the same
-    if (startR === fillRGB.r && startG === fillRGB.g && startB === fillRGB.b)
+    if (startR === fillRGB.r && startG === fillRGB.g && startB === fillRGB.b && startA === 255)
       return;
 
-    const stack = [{ x: startX, y: startY }];
-    const visited = new Set<string>();
+    const stack = [startX, startY];
 
     while (stack.length > 0) {
-      const { x, y } = stack.pop()!;
-      const key = `${x},${y}`;
-
-      if (visited.has(key) || x < 0 || x >= width || y < 0 || y >= height)
-        continue;
-      visited.add(key);
+      const y = stack.pop()!;
+      const x = stack.pop()!;
 
       const pos = (y * width + x) * 4;
       const r = data[pos];
@@ -506,10 +554,10 @@ export default function DrawingCanvas() {
         data[pos + 2] = fillRGB.b;
         data[pos + 3] = 255;
 
-        stack.push({ x: x + 1, y });
-        stack.push({ x: x - 1, y });
-        stack.push({ x, y: y + 1 });
-        stack.push({ x, y: y - 1 });
+        if (x + 1 < width) stack.push(x + 1, y);
+        if (x - 1 >= 0) stack.push(x - 1, y);
+        if (y + 1 < height) stack.push(x, y + 1);
+        if (y - 1 >= 0) stack.push(x, y - 1);
       }
     }
 
@@ -618,6 +666,14 @@ export default function DrawingCanvas() {
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    // Update custom eraser cursor position
+    if (cursorRef.current && currentTool === "eraser") {
+      const pos = getMousePos(e);
+      cursorRef.current.style.left = `${pos.x}px`;
+      cursorRef.current.style.top = `${pos.y}px`;
+      cursorRef.current.style.display = "block";
+    }
+
     if (isMovingLayer || isResizingLayer) return; // Prevent drawing if manipulating a layer
 
     if (!isDrawing) return;
@@ -635,7 +691,7 @@ export default function DrawingCanvas() {
       ["circle", "square", "triangle", "text"].includes(currentTool) &&
       showPreview
     ) {
-      drawPreview(currentPoint);
+      drawPreview(currentPoint, e.shiftKey);
       setLastPoint(currentPoint);
       return;
     }
@@ -675,6 +731,9 @@ export default function DrawingCanvas() {
         ctx.globalCompositeOperation = "source-over";
         ctx.strokeStyle = color;
         ctx.lineWidth = brushSize * 2;
+        ctx.beginPath();
+        if (lastPoint) ctx.moveTo(lastPoint.x, lastPoint.y);
+        else ctx.moveTo(currentPoint.x, currentPoint.y);
         ctx.lineTo(currentPoint.x, currentPoint.y);
         ctx.stroke();
         break;
@@ -682,6 +741,9 @@ export default function DrawingCanvas() {
       case "eraser":
         ctx.globalCompositeOperation = "destination-out";
         ctx.lineWidth = brushSize * 3;
+        ctx.beginPath();
+        if (lastPoint) ctx.moveTo(lastPoint.x, lastPoint.y);
+        else ctx.moveTo(currentPoint.x, currentPoint.y);
         ctx.lineTo(currentPoint.x, currentPoint.y);
         ctx.stroke();
         break;
@@ -691,7 +753,10 @@ export default function DrawingCanvas() {
     drawAllLayers(); // Redraw main canvas to show strokes
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e?: React.MouseEvent | React.TouchEvent | MouseEvent) => {
+    if (cursorRef.current) {
+      cursorRef.current.style.display = "none";
+    }
     if (!isDrawing) return;
 
     const previewCanvas = previewCanvasRef.current;
@@ -734,6 +799,7 @@ export default function DrawingCanvas() {
           color: color,
           brushSize: brushSize,
           filled: false, // Shapes start as outlines
+          isPerfectShape: isPerfectShape || (e && 'shiftKey' in e && e.shiftKey) ? true : false,
         },
       });
       setSelectedLayerId(newLayerId);
@@ -938,7 +1004,7 @@ export default function DrawingCanvas() {
       clearCanvas,
       downloadCanvas,
     };
-  }, []);
+  });
 
   const currentSelectedLayer = layers.find((l) => l.id === selectedLayerId);
 
@@ -961,7 +1027,7 @@ export default function DrawingCanvas() {
               : currentTool === "fill"
               ? "crosshair"
               : currentTool === "eraser"
-              ? "grab"
+              ? "none"
               : ["circle", "square", "triangle"].includes(currentTool)
               ? "copy"
               : currentTool === "text"
@@ -975,6 +1041,19 @@ export default function DrawingCanvas() {
         ref={previewCanvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ zIndex: 1 }}
+      />
+
+      {/* Custom Eraser Cursor */}
+      <div
+        ref={cursorRef}
+        className="absolute pointer-events-none rounded-full border-2 border-white mix-blend-difference"
+        style={{
+          display: "none",
+          width: brushSize * 3,
+          height: brushSize * 3,
+          transform: "translate(-50%, -50%)",
+          zIndex: 50,
+        }}
       />
 
       {/* Text input overlay for selected text layer */}
